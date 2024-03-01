@@ -4,7 +4,7 @@ import Mathlib.Tactic
 
 # Topological Spaces
 
-In this project, we firstly talk about the toplogical spaces and relevent properties here.
+In this project, we firstly talk about the topological spaces and relevant properties here.
 At the same time, we give some simple examples of topological spaces such as coarse topology.
 Then we formalize the convergence, Hausdorff property and the closed sets in the topological spaces.
 Finally, we talk about the continuous maps and homeomorphism in the topological spaces.
@@ -170,19 +170,25 @@ lemma HausdorffTopology_Hasudorff (X : Type u) [TopologicalSpace X] [HausdorffTo
 /--
 The Hausdorff topology has unique limit.
 -/
-theorem HausdorffTopology_unique_limit {u : ℕ → X} {t₁ : X} (ht₁ : Convergent_to u t₁) (ht₂ : Convergent_to u t₂) :
+theorem HausdorffTopology_unique_limit {u : ℕ → X} {t₁ : X}
+  (ht₁ : Convergent_to u t₁) (ht₂ : Convergent_to u t₂) :
   t₁ = t₂ :=
 by
-  by_contra ht₃
+  by_contra ht₃ -- Firstly, we want to show it by assuming in the contrary that t₁ ≠ t₂.
+  /- Now, since our space is Hausdorff, we can separate t₁ and t₂ by introducing
+  two disjoint open sets U and V by the following code. -/
   obtain ⟨U, V, hU, hV, hxU, hyU, hUv⟩ := HausdorffTopology_Hasudorff X t₁ t₂ ht₃
-  rw [Convergent_to_def] at ht₁ ht₂
+  rw [Convergent_to_def] at ht₁ ht₂ -- This just rewrites the definition of convergence.
+  /- Since the sequence uₙ converges to t₁, there is N₁ ∈ ℕ such that for all n ≥ N₁,
+  we have uₙ ∈ U. Similarly, there is N₂ ∈ ℕ such that for all n ≥ N₂ we have uₙ ∈ V. -/
   obtain ⟨N₁, ht₁⟩ := ht₁ U hU hxU
   obtain ⟨N₂, ht₂⟩ := ht₂ V hV hyU
-  let N : ℕ := max N₁ N₂
+  let N : ℕ := max N₁ N₂ -- Let N = max{N₁, N₂}
   specialize ht₁ N
   specialize ht₂ N
-  simp only [ge_iff_le, le_max_iff, le_refl, true_or, forall_true_left, or_true] at ht₁ ht₂
-  suffices : u N ∈ U ∩ V
+  simp only
+    [ge_iff_le, le_max_iff, le_refl, true_or, forall_true_left, or_true] at ht₁ ht₂
+  suffices : u N ∈ U ∩ V -- We have u N ∈ U and u N ∈ V. This contradicts U ∩ V = ∅.
   · rw [hUv] at this
     exact this
   · exact { left := ht₁, right := ht₂ }
@@ -290,8 +296,9 @@ by
     rw [preimage_compl] at h
     exact (IsClosed_def' _).1 h
 
-theorem Continuous_comp {Z : Type u} [TopologicalSpace Z] {f : X → Y} {g : Y → Z} (hf : Continuous f) (hg : Continuous g) :
-  Continuous ((g ∘ f) : X → Z) :=
+theorem Continuous_comp {Z : Type u} [TopologicalSpace Z] {f : X → Y} {g : Y → Z}
+  (hf : Continuous f) (hg : Continuous g) :
+    Continuous ((g ∘ f) : X → Z) :=
 by
   rw [Continuous_def] at hf hg ⊢
   intro s hs
@@ -343,7 +350,7 @@ lemma Homeomorphism_def (f : X → Y) :
 /-
 The reason why we prove this lemma is for the next theorem.
 And I can't find this lemma in mathlib :(.
-A similar version for this lemma is 'bijective_bijInv' but that seems not correct.
+A similar version for this lemma is 'bijective_bijInv' but that seems not suitable here.
 -/
 lemma Function.bijective_invFun {X Y : Type u} [Nonempty X] [Nonempty Y] {f : X → Y} (hf : Function.Bijective f) :
   Function.Bijective (Function.invFun f) :=
@@ -364,30 +371,39 @@ If X and Y are homeomorphic, then X is Hausdorff iff Y is Hausdorff.
 theorem Homeomorphism_Hausdorff {f : X → Y} (hf : Homeomorphism f) :
   HausdorffTopology X ↔ HausdorffTopology Y :=
 by
+  -- rewrite Hausdorff definition in our goal
   rw [HausdorffTopology_def, HausdorffTopology_def]
-  obtain ⟨hf₁, hf₂, hf₃⟩ := hf
+  obtain ⟨hf₁, hf₂, hf₃⟩ := hf -- obtain bijective and continuous properties
+  /- Now, we want to split our proof into two directions using 'constructor' tactic.
+  Notice that the forward is almost the same as backward direction but using
+  'Function.invFun f' instead of 'f'. Hence, we just explain the backward direction here. -/
   constructor
-  · intro hX
-    intro y₁ y₂ hy
+  /- The forward direction -/
+  · intro hX y₁ y₂ hy
     have h₁ : Function.invFun f y₁ ≠ Function.invFun f y₂
     · have hf₄ : Function.Injective (Function.invFun f)
       · exact (Function.bijective_invFun hf₁).1
       exact fun a => hy (hf₄ a)
-    obtain ⟨U, V, hU, hV, hy₁, hy₂, hUV⟩ := hX (Function.invFun f y₁) (Function.invFun f y₂) h₁
+    obtain ⟨U, V, hU, hV, hy₁, hy₂, hUV⟩ :=
+      hX (Function.invFun f y₁) (Function.invFun f y₂) h₁
     rw [Continuous_def] at hf₃
     use (Function.invFun f ⁻¹' U)
     use (Function.invFun f ⁻¹' V)
     simp only [hf₃ U hU, hf₃ V hV, mem_preimage, hy₁, hy₂, true_and]
     rw [← preimage_inter, hUV]
     simp only [preimage_empty]
-  · intro hY
-    intro x₁ x₂ hx
+  /- The backward direction -/
+  · intro hY x₁ x₂ hx -- Fix two distinct points x₁ and x₂
+    -- x₁ and x₂ are mapped to different points in Y because of injectivity of f.
     have h₁ : f x₁ ≠ f x₂
     · have hf₄ : Function.Injective f := by exact Function.Bijective.injective hf₁
       exact fun a => hx (hf₄ a)
+    /- Hence, we can separate f x₁ and f x₂ due to the Hausdorff property of space Y -/
     obtain ⟨U, V, hU, hV, hx₁, hx₂, hUV⟩ := hY (f x₁) (f x₂) h₁
+    /- Then we claim that the preimage of U and the preimage of V are the open sets we needed to
+    separate x₁ and x₂ in X. -/
     use (f ⁻¹' U)
-    use (f ⁻¹' V)
+    use (f ⁻¹' V) -- I have no clue why 'refine' doesn't work here :(
     rw [Continuous_def] at hf₂
     simp only [hf₂ U hU, hf₂ V hV, mem_preimage, hx₁, hx₂, true_and]
     rw [← preimage_inter, hUV]
